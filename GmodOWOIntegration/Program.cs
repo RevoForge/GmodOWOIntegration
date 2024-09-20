@@ -3,7 +3,6 @@
     public class Settings
     {
         public required string Owo_ip { get; set; }
-        public required int Gmod_port { get; set; }
         public bool UseAutoConnect { get; set; }
         public required IntensitySettings Intensities { get; set; }
     }
@@ -24,23 +23,22 @@
     internal class Program
     {
         private static readonly OWOIntegration owoIntegration = new();
-        private static int gmodPortNumber;
-        private static GmodUdpServer udpServer = new();
+        private static readonly GmodDatabaseWatcher DatabaseWatcher = new();
         private static bool debugRunning = true;
 
         static void Main()
         {
             Console.WriteLine("GmodOWOIntegration v0.5 By RevoForge");
 
-            gmodPortNumber = owoIntegration.Start();
+            owoIntegration.Start();
 
             try
             {
-                udpServer.StartServer(gmodPortNumber);
+                DatabaseWatcher.StartWatching();
             }
             catch (Exception ex)
             {
-                Console.WriteLine("An error occurred starting UDP Server: " + ex.Message);
+                Console.WriteLine("An error occurred starting DatabaseWatcher: " + ex.Message);
             }
 
             while (true)
@@ -62,7 +60,6 @@
                     }
                 }
             }
-            udpServer.StopServer();
         }
 
 

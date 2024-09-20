@@ -7,7 +7,6 @@ namespace GmodOWOIntegration
     {
         private bool _useAutoConnect;
         private string _Ip = "127.0.0.1";
-        private int _port;
         private static IntensitySettings _intensities = new();
         private static Sensation? _currentSensation;
         private static readonly Sensation _bleedingSensation = GmodSensations.Bleeding;
@@ -17,14 +16,13 @@ namespace GmodOWOIntegration
         private static Hitbox _currentHitbox;
         private static string? _currentDirection;
         private static bool _useBleeding = false;
-        public int Start()
+        public void Start()
         {
             LoadOWOSettings();
-            return _port;
         }
         public void LoadOWOSettings()
         {
-            string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            string exePath = AppContext.BaseDirectory;
             string directoryName = Path.GetDirectoryName(exePath) ?? "";
             string? settingsFilePath = directoryName != null ? Path.Combine(directoryName, "settings.json") : null;
 
@@ -66,7 +64,6 @@ namespace GmodOWOIntegration
 
             // Access the values
             _Ip = settings.Owo_ip;
-            _port = settings.Gmod_port;
             _useAutoConnect = settings.UseAutoConnect;
             _intensities = settings.Intensities;
             ConnectToOWO();
@@ -77,7 +74,6 @@ namespace GmodOWOIntegration
 
             {
                 Owo_ip = "127.0.0.1",
-                Gmod_port = 54321,
                 UseAutoConnect = true,
                 Intensities = new IntensitySettings
                 {
