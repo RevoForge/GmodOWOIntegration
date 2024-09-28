@@ -13,7 +13,6 @@ namespace GmodOWOIntegration
         private static Muscle[]? _currentEntryMuscles;
         private static Muscle[]? _currentBleedMuscles;
         private static readonly GmodDamageTypes _damageTypes = new();
-        private static Hitbox _currentHitbox;
         private static string? _currentDirection;
         private static bool _useBleeding = false;
         public void Start()
@@ -61,7 +60,6 @@ namespace GmodOWOIntegration
                     // Handle the case when settingsFilePath is null, such as logging an error or providing a default file path
                 }
             }
-
             // Access the values
             _Ip = settings.Owo_ip;
             _useAutoConnect = settings.UseAutoConnect;
@@ -109,60 +107,23 @@ namespace GmodOWOIntegration
             Console.WriteLine("Connected to OWO!");
 
         }
-        public static void TestSensations(string DamageType, string Hitbox, string Direction)
+        public static void ParseOWOData(string DamageType, string Direction)
         {
-            ParseOWOData(DamageType, Hitbox, Direction);
-            Console.WriteLine("Sending Sensation: " + DamageType + ", Direction: " + Direction + ", Hitbox: " + Hitbox);
-        }
-        public static void ParseOWOData(string DamageType, string Hitbox, string Direction)
-        {
-            if (int.TryParse(Hitbox, out int result))
+            _currentSensation = _damageTypes.DamageTypes[DamageType];
+            _currentDirection = Direction;
+            if (DamageType == "DMG_BULLET")
             {
-                if (DamageType == "DMG_BULLET" || DamageType == "DMG_SLASH" || DamageType == "DMG_BUCKSHOT" || DamageType == "DMG_SNIPER")
-                {
-                    _useBleeding = true;
-                }
-                else
-                {
-                    _useBleeding = false;
-                }
-                _currentHitbox = (Hitbox)result;
-                _currentSensation = _damageTypes.DamageTypes[DamageType];
-                _currentDirection = Direction;
-                CalculateOWOMuscles();
-                Console.WriteLine("Sending Sensation: " + DamageType + ", Direction: " + Direction + ", Hitbox: " + _currentHitbox);
+                _useBleeding = true;
+                HitBoxCalcs.BulletDamage(ref _currentEntryMuscles, ref _currentBleedMuscles, ref _intensities, ref _currentDirection);
             }
             else
             {
-                Console.WriteLine("Invalid hitbox value: " + Hitbox);
+                _useBleeding = false;
+                HitBoxCalcs.FallDamage(ref _currentEntryMuscles, ref _intensities);
             }
+            //Console.WriteLine("Sending Sensation: " + DamageType + ", Direction: " + Direction);
+            SendOWOData();
         }
-        private static void CalculateOWOMuscles()
-        {
-            Dictionary<Hitbox, Action> hitboxCalculations = new()
-            {
-                {Hitbox.HITGROUP_HEAD, () => HitBoxCalcs.HeadHitBoxCalculation(ref _currentEntryMuscles, ref _currentBleedMuscles, ref _intensities)},
-                {Hitbox.HITGROUP_CHEST, () => HitBoxCalcs.ChestHitBoxCalculation(ref _currentEntryMuscles, ref _currentBleedMuscles, ref _intensities, ref _currentDirection)},
-                {Hitbox.HITGROUP_STOMACH, () => HitBoxCalcs.StomachHitBoxCalculation(ref _currentEntryMuscles, ref _currentBleedMuscles, ref _intensities, ref _currentDirection)},
-                {Hitbox.HITGROUP_LEFTARM, () => HitBoxCalcs.LeftArmHitBoxCalculation(ref _currentEntryMuscles, ref _currentBleedMuscles, ref _intensities, ref _currentDirection)},
-                {Hitbox.HITGROUP_RIGHTARM, () => HitBoxCalcs.RightArmHitBoxCalculation(ref _currentEntryMuscles, ref _currentBleedMuscles, ref _intensities, ref _currentDirection)},
-                {Hitbox.HITGROUP_LEFTLEG, () => HitBoxCalcs.LeftLegHitBoxCalculation(ref _currentEntryMuscles, ref _currentBleedMuscles, ref _intensities, ref _currentDirection)},
-                {Hitbox.HITGROUP_RIGHTLEG, () => HitBoxCalcs.RightLegHitBoxCalculation(ref _currentEntryMuscles, ref _currentBleedMuscles, ref _intensities, ref _currentDirection)}
-            };
-
-            if (hitboxCalculations.TryGetValue(_currentHitbox, out Action? value))
-            {
-                value.Invoke();
-                SendOWOData();
-            }
-            else
-            {
-                Console.WriteLine("Invalid hitbox value: " + _currentHitbox);
-            }
-
-        }
-
-
         private static void SendOWOData()
         {
             Sensation sensationToSend;

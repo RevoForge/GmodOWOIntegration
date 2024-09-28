@@ -24,8 +24,6 @@
     {
         private static readonly OWOIntegration owoIntegration = new();
         private static readonly GmodDatabaseWatcher DatabaseWatcher = new();
-        private static bool debugRunning = true;
-
         static void Main()
         {
             Console.WriteLine("GmodOWOIntegration v0.5 By RevoForge");
@@ -43,71 +41,8 @@
 
             while (true)
             {
-                Console.WriteLine("Type 'debug' to start debugging or 'exit' to quit:");
-                string? userInput = Console.ReadLine();
 
-                if (userInput != null)
-                {
-                    string response = userInput.ToLower();
-                    if (response == "exit")
-                    {
-                        break; // Exit the program
-                    }
-                    else if (response == "debug")
-                    {
-                        debugRunning = true;
-                        DebugLoop();
-                    }
-                }
             }
         }
-
-
-        static void DebugLoop()
-        {
-            while (debugRunning)
-            {
-                string damageType = GetUserInput("DamageType", "DMG_BULLET");
-                string hitbox = GetUserInput("Hitbox", "2");
-                string direction = GetUserInput("Direction", "Front");
-
-                OWOIntegration.TestSensations(damageType, hitbox, direction);
-
-                if (!AskToRunAgain())
-                {
-                    break;
-                }
-            }
-        }
-
-        static string GetUserInput(string prompt, string defaultValue)
-        {
-            Console.WriteLine($"Debug Feature - Enter {prompt}:");
-            string? userInput = Console.ReadLine();
-
-            if (string.IsNullOrEmpty(userInput))
-            {
-                Console.WriteLine($"Debug Feature - Using default value: {defaultValue}");
-                return defaultValue;
-            }
-
-            return userInput;
-        }
-
-        static bool AskToRunAgain()
-        {
-            Console.WriteLine("Do you want to run the program again? (type yes to continue or any other input to stop debugging)");
-            string? response = Console.ReadLine();
-
-            if (response != null && response.Equals("yes", StringComparison.CurrentCultureIgnoreCase))
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
     }
 }
