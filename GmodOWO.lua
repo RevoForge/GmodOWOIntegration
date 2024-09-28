@@ -6,7 +6,7 @@ if sql.TableExists("damage_data") then
 else
     print("SQL Table Not Found: Creating Table")
     -- Create the table since it doesn't exist
-    sql.Query("CREATE TABLE damage_data (id INTEGER PRIMARY KEY AUTOINCREMENT, damage_type TEXT, hitbox TEXT, direction TEXT)")
+    sql.Query("CREATE TABLE damage_data (id INTEGER PRIMARY KEY AUTOINCREMENT, damage_type TEXT, direction TEXT)")
 end
 
 -- Creat a table of damage types for the hook
@@ -46,53 +46,59 @@ DmgTypeMap = {
     [DMG_MISSILEDEFENSE] = "DMG_MISSILEDEFENSE"
 }
 
--- Hook into the EntityTakeDamage event
-hook.Add("EntityTakeDamage", "OWOIntegration_DamageHook", function(ent, dmginfo)
-    -- Check if the entity is the local player
-    if ent == LocalPlayer() then
-        print("OWOIntegration_DamageHook called")
-        local dmgType = DmgTypeMap[dmginfo:GetDamageType()] or ""
-        print("Damage type: " .. tostring(dmgType))
+gameevent.Listen( "player_hurt" )
+hook.Add( "player_hurt", "player_hurt_OWO", function( data )
+    -- local health = data.health
+    -- local priority = data.priority or 0
+    local id = data.userid
+    local attackerid = data.attacker
+    --print("Attacker",attackerid) --attacker id is 0 when taking fall damage
 
-        -- Get the hitbox that was hit
-        local hitbox = LocalPlayer():LastHitGroup()
-        print("Hitbox: " .. tostring(hitbox))
+    local player = LocalPlayer()
+    local attacker = Player(attackerid)
 
-        -- Calculate the relative direction of the damage origin
-        local damageOrigin = dmginfo:GetDamageOrigin()
-        local playerPos = LocalPlayer():GetPos()
-        local direction = (damageOrigin - playerPos):GetNormalized()
+    if id == player:UserID() then
+        -- debug message remove when finished
+        local damagetype = "DMG_BULLET"
+        local direction = "None"
 
-        -- Simplify the direction to front, back, left, right, etc.
-        local playerForward = LocalPlayer():GetAimVector()
-        local dotProduct = direction:Dot(playerForward)
-
-        if dotProduct > 0.5 then
-            -- Front
-            direction = "Front"
-        elseif dotProduct < -0.5 then
-            -- Back
-            direction = "Back"
+        if attackerid == 0 then
+            damagetype = "DMG_FALL"
         else
-            -- Side
-            direction = (direction:Dot(LocalPlayer():GetRight()) > 0) and "Right" or "Left"
+            -- Needed for position calculation
+            local playerpos = player:EyePos()
+            local attackerpos = attacker:EyePos()
+
+            -- Calculate the relative direction of the damage origin
+            direction = (attackerpos - playerpos):GetNormalized()
+
+            -- Simplify the direction to front, back, left, right, etc.
+            local playerForward = player:GetAimVector()
+            local dotProduct = direction:Dot(playerForward)
+
+            if dotProduct > 0.5 then
+                -- Front
+                direction = "Front"
+            elseif dotProduct < -0.5 then
+                -- Back
+                direction = "Back"
+            else
+                -- Side
+                direction = (direction:Dot(player:GetRight()) > 0) and "Right" or "Left"
+            end
         end
-        print("Direction: " .. tostring(direction))
 
         -- Insert the data into the database
         local query = string.format(
-            "INSERT INTO damage_data (damage_type, hitbox, direction) VALUES (%s, %d, %s)",
-            sql.SQLStr(dmgType),
-            sql.SQLStr(hitbox),
+            "INSERT INTO damage_data (damage_type, direction) VALUES (%s, %s)",
+            sql.SQLStr(damagetype),
             sql.SQLStr(direction)
         )
-        
-        local result = sql.Query(query)
 
+        local result = sql.Query(query)
+        -- debug message remove when finished
         if result == false then
             print("SQL Error: " .. sql.LastError())
-        else
-            print("Data inserted into database successfully.")
         end
     end
-end)
+end )
