@@ -24,21 +24,34 @@ namespace GmodOWOIntegration
     internal class Program
     {
         private static readonly OWOIntegration owoIntegration = new();
-        private static readonly GmodDatabaseWatcher DatabaseWatcher = new();
         static void Main()
         {
-            Console.WriteLine("GmodOWOIntegration v0.6 By RevoForge");
+            Console.WriteLine("GmodOWOIntegration v0.7 By RevoForge");
 
             owoIntegration.Start();
-            
-            try
+
+            int mode = 0;
+            bool validInput = false;
+
+            // Keep prompting the user until a valid input (1 or 2) is provided
+            while (!validInput)
             {
-                DatabaseWatcher.StartWatching();
+                Console.WriteLine("Choose mode: (1) Single Player or (2) Multiplayer");
+                string userInput = Console.ReadLine();
+
+                if (int.TryParse(userInput, out mode) && (mode == 1 || mode == 2))
+                {
+                    validInput = true; // Valid input, exit the loop
+                }
+                else
+                {
+                    Console.WriteLine("Invalid input. Please enter 1 for Single Player or 2 for Multiplayer.");
+                }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine("An error occurred starting DatabaseWatcher: " + ex.Message);
-            }
+
+            bool isMultiplayer = mode == 2;
+            GmodDatabaseWatcher watcher = new(isMultiplayer);
+            watcher.StartWatching();
 
             while (true)
             {
