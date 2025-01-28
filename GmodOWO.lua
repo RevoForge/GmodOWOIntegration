@@ -1,17 +1,33 @@
 if CLIENT then
-    -- Make sure the database path points to the correct file
-    -- This refers to the default 'cl.db' in the Garry's Mod folder
-    sql.Query("ATTACH DATABASE 'garrysmod/cl.db' AS client_db")
+    -- Path to store the data file
+    local filePath = "damage_data.json"
+    print("OWO Mod Running")
 
-    -- Check if the table exists before attempting to delete data
-    if sql.TableExists("client_db.damage_data") then
-        print("SQL Table Found: Deleting Old Data")
-        -- Clear the table to prevent the file from getting too large
-        sql.Query("DELETE FROM client_db.damage_data")
-    else
-        print("SQL Table Not Found: Creating Table")
-        -- Create the table since it doesn't exist
-        sql.Query("CREATE TABLE client_db.damage_data (id INTEGER PRIMARY KEY AUTOINCREMENT, damage_type TEXT, direction TEXT)")
+    -- Function to write data to a JSON file
+    local function WriteDataToJson(damageData)
+        -- Convert the table to JSON format
+        local jsonData = util.TableToJSON(damageData, true)
+
+        -- Check if the file exists first
+        if not file.Exists(filePath, "DATA") then
+            -- Create the file by opening it in write mode
+            local file = file.Open(filePath, "w", "DATA")
+            if file then
+                file:Write(jsonData)
+                file:Close()
+            else
+                print("Error creating file")
+            end
+        else
+            -- If the file exists, simply open and write to it
+            local file = file.Open(filePath, "w", "DATA")  -- Open the file in write mode
+            if file then
+                file:Write(jsonData)
+                file:Close()
+            else
+                print("Error opening file")
+            end
+        end
     end
 
     -- Create a table of damage types for the hook
@@ -54,6 +70,7 @@ if CLIENT then
     gameevent.Listen("player_hurt")
     hook.Add("player_hurt", "player_hurt_OWO", function(data)
         local player = LocalPlayer()
+        print("Hurt Event Triggered")
 
         local id = data.userid
         if id == player:UserID() then
@@ -86,17 +103,15 @@ if CLIENT then
                 end
             end
 
-            -- Insert the data into the database
-            local query = string.format(
-                "INSERT INTO damage_data (damage_type, direction) VALUES (%s, %s)",
-                sql.SQLStr(damagetype),
-                sql.SQLStr(direction)
-            )
+            -- Store the data as a table
+            local damageData = {
+                damage_type = damagetype,
+                direction = direction
+            }
+            print("Hurt Event Sent")
 
-            local result = sql.Query(query)
-            if result == false then
-                print("SQL Error: " .. sql.LastError())
-            end
+            -- Write the data to the JSON file
+            WriteDataToJson(damageData)
         end
     end)
 end

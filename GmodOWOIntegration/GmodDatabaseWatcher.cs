@@ -1,104 +1,105 @@
 ﻿using GmodOWOIntegration;
-using Microsoft.Data.Sqlite;
+using Newtonsoft.Json;
 using SQLitePCL;
 using static GmodOWOIntegration.GameFinder;
-
 [Serializable]
 class GmodOWOData
 {
-    public required string damageType;
-    public required string direction;
+    public required string damage_type { get; set; }
+    public required string direction { get; set; }
 }
 
 class GmodDatabaseWatcher
 {
-    private readonly string dbPath = GetGarrysModInstallPath()+"\\garrysmod\\cl.db";
+    private readonly string dbPath = Path.Combine(GetGarrysModInstallPath(), "garrysmod", "data", "damage_data.json");
     private DateTime lastModifiedTime;
+    private DateTime lastReadTime;
 
     public void StartWatching()
     {
-        // Initialize the SQLite provider
+        // Initialize SQLite provider
         Batteries.Init();
-        int maxRetries = 60; // Check every 5 seconds for 5 minutes (60 retries * 5 seconds = 300 seconds)
-        int retries = 0;
-        Console.WriteLine("Checking for database file at " + dbPath);
-        // Continuously check for the database file
-        while (!File.Exists(dbPath) && retries < maxRetries)
-        {
-            // Show progress on the same line
-            Console.Write($"\rDatabase file not found. Retrying in 5 seconds... ({retries + 1}/{maxRetries})");
-            // Wait for 5 seconds before trying again
-            Thread.Sleep(5000);
+        Console.WriteLine($"Checking for database file at {dbPath}");
 
-            retries++;
+        // Use FileSystemWatcher to monitor the file
+        if (File.Exists(dbPath))
+        {
+            Console.WriteLine("\nDatabase file found. Starting to watch for changes...");
+            WatchFile();
         }
-
-        if (!File.Exists(dbPath))
+        else
         {
-            Console.WriteLine("\nDatabase file not found after 5 minutes. Exiting...");
-            return;
+            Console.WriteLine("\nDatabase file not found.");
         }
+    }
 
-        Console.WriteLine("\nDatabase file found. Starting to watch for changes...");
-
-        Task.Run(() =>
+    private void WatchFile()
+    {
+        var fileWatcher = new FileSystemWatcher(Path.GetDirectoryName(dbPath))
         {
-            lastModifiedTime = File.GetLastWriteTime(dbPath);
+            Filter = Path.GetFileName(dbPath),
+            NotifyFilter = NotifyFilters.LastWrite
+        };
 
-            while (true)
+        fileWatcher.Changed += (sender, args) =>
+        {
+            // Ensure the change is from our file and not some other process
+            if (args.FullPath == dbPath)
             {
                 DateTime currentModifiedTime = File.GetLastWriteTime(dbPath);
 
-                // Check if the database file has been modified
-                if (currentModifiedTime > lastModifiedTime)
+                // Only process if the file's modification time is after the last read time
+                if (currentModifiedTime > lastReadTime)
                 {
-                    //Console.WriteLine("Database change detected. Processing new data...");
-                    lastModifiedTime = currentModifiedTime;
+                    // Add a small debounce delay (e.g., 100ms) to ensure the file is fully written before processing
+                    Thread.Sleep(100);
 
-                    // Process new data in the database
+                    // Update the last read time
+                    lastReadTime = currentModifiedTime;
+
+                    Console.WriteLine("Database change detected. Processing new data...");
                     ProcessNewData();
                 }
-
-                // Sleep for 0.1 seconds before checking again
-                Thread.Sleep(100);  // Polling interval set to 0.1 seconds
             }
-        });
+        };
+
+        fileWatcher.EnableRaisingEvents = true;
+
+        // Keep the program alive to watch for file changes
+        Console.ReadLine();
     }
 
     private void ProcessNewData()
     {
         try
         {
-            using SqliteConnection connection = new($"Data Source={dbPath};Mode=ReadOnly;");
-            connection.Open();
-
-            // Query the database for the damage data (assumes auto-incrementing id for unique rows)
-            string query = "SELECT damage_type, direction FROM damage_data ORDER BY id DESC LIMIT 1"; // Get the latest entry
-            using SqliteCommand command = new(query, connection);
-            using SqliteDataReader reader = command.ExecuteReader();
-            if (reader.Read())
+            // Read and process the data from the JSON file
+            if (File.Exists(dbPath))
             {
-                GmodOWOData jsonData = new()
-                {
-                    damageType = (string)reader["damage_type"],
-                    direction = (string)reader["direction"],
-                };
-                if (jsonData.damageType != "" && jsonData.direction != "")
+                string jsonData = File.ReadAllText(dbPath).Trim();
+
+                // Deserialize the JSON data
+                GmodOWOData damageData = JsonConvert.DeserializeObject<GmodOWOData>(jsonData);
+
+                if (damageData != null && !string.IsNullOrEmpty(damageData.damage_type) && !string.IsNullOrEmpty(damageData.direction))
                 {
                     // Process the retrieved data
-                    OWOIntegration.ParseOWOData(jsonData.damageType, jsonData.direction);
-                    Console.WriteLine($"Processed data: Damage Type = {jsonData.damageType}, Direction = {jsonData.direction}");
+                    OWOIntegration.ParseOWOData(damageData.damage_type, damageData.direction);
+                    Console.WriteLine($"Processed data: Damage Type = {damageData.damage_type}, Direction = {damageData.direction}");
                 }
                 else
                 {
-                    Console.WriteLine("Database data is empty. No data to process.");
+                    Console.WriteLine("JSON data is empty or malformed. No data to process.");
                 }
-
+            }
+            else
+            {
+                Console.WriteLine($"File {dbPath} not found.");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine("An error occurred while reading from the database: " + ex.Message);
+            Console.WriteLine("An error occurred while processing the data: " + ex.Message);
         }
     }
 }
