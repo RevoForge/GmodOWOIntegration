@@ -1,6 +1,7 @@
 ﻿using GmodOWOIntegration;
 using Microsoft.Data.Sqlite;
 using SQLitePCL;
+using static GmodOWOIntegration.GameFinder;
 
 [Serializable]
 class GmodOWOData
@@ -11,8 +12,7 @@ class GmodOWOData
 
 class GmodDatabaseWatcher
 {
-
-    private readonly string dbPath = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\GarrysMod\\garrysmod\\cl.db";
+    private readonly string dbPath = GetGarrysModInstallPath()+"\\garrysmod\\cl.db";
     private DateTime lastModifiedTime;
 
     public void StartWatching()
@@ -21,7 +21,7 @@ class GmodDatabaseWatcher
         Batteries.Init();
         int maxRetries = 60; // Check every 5 seconds for 5 minutes (60 retries * 5 seconds = 300 seconds)
         int retries = 0;
-
+        Console.WriteLine("Checking for database file at " + dbPath);
         // Continuously check for the database file
         while (!File.Exists(dbPath) && retries < maxRetries)
         {

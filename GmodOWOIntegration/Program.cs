@@ -1,4 +1,5 @@
-﻿namespace GmodOWOIntegration
+﻿
+namespace GmodOWOIntegration
 {
     public class Settings
     {
@@ -26,10 +27,10 @@
         private static readonly GmodDatabaseWatcher DatabaseWatcher = new();
         static void Main()
         {
-            Console.WriteLine("GmodOWOIntegration v0.5 By RevoForge");
+            Console.WriteLine("GmodOWOIntegration v0.6 By RevoForge");
 
             owoIntegration.Start();
-
+            
             try
             {
                 DatabaseWatcher.StartWatching();
