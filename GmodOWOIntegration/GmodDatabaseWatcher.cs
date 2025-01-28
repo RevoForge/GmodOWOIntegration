@@ -17,22 +17,47 @@ class GmodDatabaseWatcher
 
     public void StartWatching()
     {
-        // Initialize SQLite provider
-        Batteries.Init();
         Console.WriteLine($"Checking for database file at {dbPath}");
 
-        // Use FileSystemWatcher to monitor the file
+        // Check if the file exists, and if not, create it
         if (File.Exists(dbPath))
         {
             Console.WriteLine("\nDatabase file found. Starting to watch for changes...");
-            WatchFile();
         }
         else
         {
-            Console.WriteLine("\nDatabase file not found.");
+            // If the file does not exist, create it with initial data
+            Console.WriteLine("\nDatabase file not found. Creating new file...");
+            CreateInitialFile();
+        }
+
+        // Start watching the file for changes
+        WatchFile();
+    }
+    // Method to create the initial file with default JSON data
+    private void CreateInitialFile()
+    {
+        // Create an initial damage data object (can be adjusted as needed)
+        var initialData = new GmodOWOData
+        {
+            damage_type = "None",
+            direction = "None"
+        };
+
+        // Serialize the data to JSON
+        string jsonData = JsonConvert.SerializeObject(initialData, Formatting.Indented);
+
+        // Write the JSON data to the file
+        try
+        {
+            File.WriteAllText(dbPath, jsonData);
+            Console.WriteLine("Initial database file created with default data.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating the file: {ex.Message}");
         }
     }
-
     private void WatchFile()
     {
         var fileWatcher = new FileSystemWatcher(Path.GetDirectoryName(dbPath))
