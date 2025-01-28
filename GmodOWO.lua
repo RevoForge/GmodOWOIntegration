@@ -1,13 +1,17 @@
 if CLIENT then
+    -- Make sure the database path points to the correct file
+    -- This refers to the default 'cl.db' in the Garry's Mod folder
+    sql.Query("ATTACH DATABASE 'garrysmod/cl.db' AS client_db")
+
     -- Check if the table exists before attempting to delete data
-    if sql.TableExists("damage_data") then
+    if sql.TableExists("client_db.damage_data") then
         print("SQL Table Found: Deleting Old Data")
         -- Clear the table to prevent the file from getting too large
-        sql.Query("DELETE FROM damage_data")
+        sql.Query("DELETE FROM client_db.damage_data")
     else
         print("SQL Table Not Found: Creating Table")
         -- Create the table since it doesn't exist
-        sql.Query("CREATE TABLE damage_data (id INTEGER PRIMARY KEY AUTOINCREMENT, damage_type TEXT, direction TEXT)")
+        sql.Query("CREATE TABLE client_db.damage_data (id INTEGER PRIMARY KEY AUTOINCREMENT, damage_type TEXT, direction TEXT)")
     end
 
     -- Create a table of damage types for the hook
