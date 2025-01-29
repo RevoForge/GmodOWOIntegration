@@ -12,7 +12,7 @@ class GmodOWOData
 class GmodDatabaseWatcher
 {
     private readonly string dbPath = Path.Combine(GetGarrysModInstallPath(), "garrysmod", "data", "damage_data.json");
-    private DateTime lastModifiedTime;
+    private DateTime currentModifiedTime;
     private DateTime lastReadTime;
 
     public void StartWatching()
@@ -60,39 +60,38 @@ class GmodDatabaseWatcher
     }
     private void WatchFile()
     {
-        var fileWatcher = new FileSystemWatcher(Path.GetDirectoryName(dbPath))
+        Task.Run(() =>
         {
-            Filter = Path.GetFileName(dbPath),
-            NotifyFilter = NotifyFilters.LastWrite
-        };
-
-        fileWatcher.Changed += (sender, args) =>
-        {
-            // Ensure the change is from our file and not some other process
-            if (args.FullPath == dbPath)
+            var fileWatcher = new FileSystemWatcher(Path.GetDirectoryName(dbPath))
             {
-                DateTime currentModifiedTime = File.GetLastWriteTime(dbPath);
+                Filter = Path.GetFileName(dbPath),
+                NotifyFilter = NotifyFilters.LastWrite
+            };
 
-                // Only process if the file's modification time is after the last read time
-                if (currentModifiedTime > lastReadTime)
+            fileWatcher.Changed += (sender, args) =>
+            {
+                if (args.FullPath == dbPath)
                 {
-                    // Add a small debounce delay (e.g., 100ms) to ensure the file is fully written before processing
-                    Thread.Sleep(100);
+                    currentModifiedTime = File.GetLastWriteTime(dbPath);
 
-                    // Update the last read time
-                    lastReadTime = currentModifiedTime;
+                    if (currentModifiedTime > lastReadTime)
+                    {
+                        Thread.Sleep(100);
+                        lastReadTime = currentModifiedTime;
 
-                    Console.WriteLine("Database change detected. Processing new data...");
-                    ProcessNewData();
+                        //Console.WriteLine("Database change detected. Processing new data...");
+                        ProcessNewData();
+                    }
                 }
-            }
-        };
+            };
 
-        fileWatcher.EnableRaisingEvents = true;
+            fileWatcher.EnableRaisingEvents = true;
 
-        // Keep the program alive to watch for file changes
-        Console.ReadLine();
+            // Keep the watcher alive until the program exits
+            while (true) Thread.Sleep(100);
+        });
     }
+
 
     private void ProcessNewData()
     {

@@ -27,7 +27,7 @@ namespace GmodOWOIntegration
         private static readonly GmodDatabaseWatcher DatabaseWatcher = new();
         static void Main()
         {
-            Console.WriteLine("GmodOWOIntegration v0.6 By RevoForge");
+            Console.WriteLine("GmodOWOIntegration v0.8 By RevoForge");
 
             owoIntegration.Start();
             
